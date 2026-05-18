@@ -20,10 +20,6 @@ export interface TextDependency {
  */
 export declare function analyzeApexFile(filePath: string): TextDependency[];
 /**
- * Analyzes a Flow metadata XML file for object and field references.
- */
-export declare function analyzeFlowFile(filePath: string): TextDependency[];
-/**
  * Analyzes a ValidationRule XML for field references.
  */
 export declare function analyzeValidationRuleFile(filePath: string): TextDependency[];
