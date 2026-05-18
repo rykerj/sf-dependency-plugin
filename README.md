@@ -9,7 +9,7 @@ Given one or more seed components (Apex classes, triggers), the tool recursively
 ## Install
 
 ```bash
-sf plugins install https://github.com/your-org/sf-dependency-resolver
+sf plugins install https://github.com/rykerj/sf-dependency-plugin
 ```
 
 Requires SF CLI and an authenticated org (`sf org login web --alias myDevSandbox`).
