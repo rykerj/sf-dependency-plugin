@@ -1,0 +1,62 @@
+{
+  "name": "@ryker/sf-dependency-resolver",
+  "version": "1.0.1",
+  "description": "SF CLI plugin to resolve Salesforce component dependencies and produce scoped scratch org packages",
+  "author": "Your Org",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/sf-dependency-resolver.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "/oclif.manifest.json"
+  ],
+  "keywords": [
+    "salesforce",
+    "sf-plugin",
+    "apex",
+    "scratch-org",
+    "dependency-resolver"
+  ],
+  "dependencies": {
+    "@oclif/core": "^3",
+    "@salesforce/core": "^6",
+    "fast-xml-parser": "^4",
+    "sf": "^0.2.0",
+    "xmlbuilder2": "^3"
+  },
+  "devDependencies": {
+    "@oclif/test": "^3",
+    "@types/mocha": "^10",
+    "@types/node": "^18",
+    "mocha": "^10",
+    "ts-node": "^10",
+    "typescript": "^5"
+  },
+  "oclif": {
+    "bin": "sf",
+    "dirname": "sf",
+    "commands": "./lib/commands",
+    "plugins": [],
+    "topicSeparator": " ",
+    "topics": {
+      "dependency": {
+        "description": "Resolve Salesforce component dependencies for scratch org development"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf lib",
+    "lint": "eslint src --ext .ts",
+    "test": "mocha --require ts-node/register test/**/*.test.ts",
+    "prepack": "npm run clean && npm run build && oclif manifest"
+  }
+}

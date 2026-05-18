@@ -1,0 +1,1 @@
+{"version":3,"file":"world.d.ts","sourceRoot":"","sources":["../../../src/commands/hello/world.ts"],"names":[],"mappings":"AAAA,OAAO,EAAC,OAAO,EAAC,MAAM,aAAa,CAAA;AAEnC,MAAM,CAAC,OAAO,OAAO,KAAM,SAAQ,OAAO;IACxC,MAAM,CAAC,IAAI,KAAK;IAChB,MAAM,CAAC,WAAW,SAAoB;IACtC,MAAM,CAAC,QAAQ,WAId;IACD,MAAM,CAAC,KAAK,KAAK;IAEX,GAAG,IAAI,OAAO,CAAC,IAAI,CAAC;CAG3B"}
