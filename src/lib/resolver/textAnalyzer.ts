@@ -231,29 +231,45 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   //   Set<MyObject__c>
   // -------------------------------------------------------------------------
 
-  const genericTypeRegex =
-    /\b(?:List|Set|Map|Iterable|Iterator)<([\w<>,\s]+)>/g;
 
-  while ((match = genericTypeRegex.exec(source)) !== null) {
-    const params = match[1]
-      .split(',')
-      .map(p => p.trim())
-      .filter(Boolean);
+const genericTypeRegex =
+  /\b(?:List|Set|Iterable|Iterator)<([\w]+)>|\bMap<([\w]+)\s*,\s*([\w]+)>/g;
 
-    for (const name of params) {
-      if (isPrimitiveType(name)) continue;
+while ((match = genericTypeRegex.exec(source)) !== null) {
 
-      const symbolType = classifySymbol(name);
+  const discoveredTypes: string[] = [];
 
-      if (symbolType) {
-        deps.push({
-          type: symbolType,
-          apiName: name,
-          referenceType: 'GenericType'
-        });
-      }
+  // List<T>, Set<T>, Iterable<T>, Iterator<T>
+  if (match[1]) {
+    discoveredTypes.push(match[1]);
+  }
+
+  // Map<K,V>
+  if (match[2]) {
+    discoveredTypes.push(match[2]);
+  }
+
+  if (match[3]) {
+    discoveredTypes.push(match[3]);
+  }
+
+  for (const name of discoveredTypes) {
+
+    if (!name) continue;
+
+    if (isPrimitiveType(name)) continue;
+
+    const symbolType = classifySymbol(name);
+
+    if (symbolType) {
+      deps.push({
+        type: symbolType,
+        apiName: name,
+        referenceType: 'GenericType'
+      });
     }
   }
+}
 
   // -------------------------------------------------------------------------
   // Variable Type Mapping
