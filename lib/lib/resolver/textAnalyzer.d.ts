@@ -6,19 +6,25 @@ export interface TextDependency {
 /**
  * Analyzes a local Apex class or trigger file for dependencies.
  * Uses regex-based AST approximation — not a full parser.
- * Known gaps: Type.forName(), dynamic SOQL, property chains > 2 deep.
+ *
+ * Fixed bugs:
+ *   - __c/__r names no longer misclassified as ApexClass
+ *   - Variable names no longer confused with class names
+ *   - extends / implements now captured
+ *   - List<MyObject__c> correctly emitted as CustomObject not ApexClass
+ *
+ * Known remaining gaps:
+ *   - Type.forName() dynamic instantiation
+ *   - String-concatenated or dynamic SOQL
+ *   - Property chains deeper than two levels
  */
 export declare function analyzeApexFile(filePath: string): TextDependency[];
 /**
  * Analyzes a Flow metadata XML file for object and field references.
- * NOTE: Flow dependency data from MetadataComponentDependency is unreliable,
- * so we parse the XML directly when useLocalSource is true.
  */
 export declare function analyzeFlowFile(filePath: string): TextDependency[];
 /**
  * Analyzes a ValidationRule XML for field references.
- * Validation rules are always included (never stripped), but their
- * field references are added to the object's field inclusion list.
  */
 export declare function analyzeValidationRuleFile(filePath: string): TextDependency[];
 /**
