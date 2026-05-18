@@ -24,17 +24,20 @@ export interface TextDependency {
  */
 export function analyzeApexFile(filePath: string): TextDependency[] {
   const deps: TextDependency[] = [];
-  if (!fs.existsSync(filePath)) return deps;
+
+  if (!fs.existsSync(filePath)) {
+    return deps;
+  }
 
   const raw = fs.readFileSync(filePath, 'utf-8');
 
-  // Strip comments first to avoid matching identifiers inside commented-out code
+  // Strip comments first so we don't match commented-out code
   const source = stripComments(raw);
 
   let match: RegExpExecArray | null;
 
   // -------------------------------------------------------------------------
-  // Salesforce Standard Objects / System Types
+  // Salesforce Standard Objects
   // -------------------------------------------------------------------------
 
   const STANDARD_OBJECTS = new Set([
@@ -57,18 +60,22 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     'Product2',
     'Quote',
     'QuoteLineItem',
-    'ContentDocument',
-    'ContentVersion',
-    'ContentDocumentLink',
-    'RecordType',
     'Attachment',
     'Note',
     'FeedItem',
     'FeedComment',
+    'ContentDocument',
+    'ContentVersion',
+    'ContentDocumentLink',
+    'RecordType',
     'PermissionSet',
     'PermissionSetAssignment',
     'Profile'
   ]);
+
+  // -------------------------------------------------------------------------
+  // Apex / Salesforce System Types
+  // -------------------------------------------------------------------------
 
   const SYSTEM_TYPES = new Set([
     'System',
@@ -90,21 +97,24 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     'HttpResponse',
     'XmlStreamReader',
     'XmlStreamWriter',
-    'AuraHandledException',
     'String',
-    'Date',
-    'Datetime',
-    'Time',
-    'Decimal',
     'Integer',
     'Long',
     'Double',
+    'Decimal',
     'Boolean',
-    'Id',
+    'Date',
+    'Datetime',
+    'Time',
     'Blob',
+    'Id',
     'Object',
     'Type'
   ]);
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
 
   function isStandardObject(name: string): boolean {
     return STANDARD_OBJECTS.has(name);
@@ -114,18 +124,39 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     return SYSTEM_TYPES.has(name);
   }
 
+  function isCustomField(name: string): boolean {
+    return /__(c|r|pc)$/.test(name);
+  }
+
   function classifySymbol(
     name: string
   ): 'ApexClass' | 'CustomObject' | 'StandardObject' | null {
-    if (!name) return null;
 
-    if (isApexKeyword(name)) return null;
+    if (!name) {
+      return null;
+    }
 
-    if (isSalesforceNamespace(name)) return null;
+    if (isApexKeyword(name)) {
+      return null;
+    }
 
-    if (isSystemType(name)) return null;
+    if (isSalesforceNamespace(name)) {
+      return null;
+    }
 
-    if (isCustomMetadataName(name)) {
+    if (isSystemType(name)) {
+      return null;
+    }
+
+    // Custom object / metadata / platform-ish names
+    if (
+      name.endsWith('__c') ||
+      name.endsWith('__mdt') ||
+      name.endsWith('__e') ||
+      name.endsWith('__b') ||
+      name.endsWith('__x') ||
+      name.endsWith('__kav')
+    ) {
       return 'CustomObject';
     }
 
@@ -137,35 +168,45 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   }
 
   // -------------------------------------------------------------------------
-  // Class declarations — extends and implements
+  // Class declarations
+  // Handles:
+  //   class MyClass extends BaseClass implements IFoo, IBar
   // -------------------------------------------------------------------------
 
   const classDeclarationRegex =
     /\bclass\s+\w[\w]*(?:\s+extends\s+([\w]+))?(?:\s+implements\s+([\w\s,]+))?(?:\s*\{)/g;
 
   while ((match = classDeclarationRegex.exec(source)) !== null) {
+
+    // extends
     if (match[1]) {
-      const symbolType = classifySymbol(match[1].trim());
+
+      const parentClass = match[1].trim();
+
+      const symbolType = classifySymbol(parentClass);
 
       if (symbolType === 'ApexClass') {
         deps.push({
           type: 'ApexClass',
-          apiName: match[1].trim(),
+          apiName: parentClass,
           referenceType: 'Extends'
         });
       }
     }
 
+    // implements
     if (match[2]) {
-      for (const iface of match[2].split(',')) {
-        const name = iface.trim();
 
-        const symbolType = classifySymbol(name);
+      for (const iface of match[2].split(',')) {
+
+        const ifaceName = iface.trim();
+
+        const symbolType = classifySymbol(ifaceName);
 
         if (symbolType === 'ApexClass') {
           deps.push({
             type: 'ApexClass',
-            apiName: name,
+            apiName: ifaceName,
             referenceType: 'Implements'
           });
         }
@@ -174,16 +215,18 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   }
 
   // -------------------------------------------------------------------------
-  // Apex class / SObject instantiation
+  // Instantiation
   // Handles:
   //   new MyClass()
   //   new Account()
-  //   new MyObject__c()
+  //   new CustomObj__c()
   // -------------------------------------------------------------------------
 
-  const instantiationRegex = /\bnew\s+([\w]+)\s*[({]/g;
+  const instantiationRegex =
+    /\bnew\s+([\w]+)\s*[({]/g;
 
   while ((match = instantiationRegex.exec(source)) !== null) {
+
     const name = match[1];
 
     const symbolType = classifySymbol(name);
@@ -200,20 +243,23 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   // -------------------------------------------------------------------------
   // Static method calls
   // Handles:
-  //   MyClass.doThing()
+  //   MyClass.someMethod()
   // Excludes:
   //   System.debug()
   //   Database.query()
   // -------------------------------------------------------------------------
 
-  const staticCallRegex = /\b([A-Z][\w]*)\.[\w]+\s*\(/g;
+  const staticCallRegex =
+    /\b([A-Z][\w]*)\.[\w]+\s*\(/g;
 
   while ((match = staticCallRegex.exec(source)) !== null) {
+
     const className = match[1];
 
     const symbolType = classifySymbol(className);
 
     if (symbolType === 'ApexClass') {
+
       deps.push({
         type: 'ApexClass',
         apiName: className,
@@ -223,60 +269,63 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   }
 
   // -------------------------------------------------------------------------
-  // Generic type parameters
+  // Generic Types
   // Handles:
-  //   List<MyClass>
   //   List<Account>
+  //   Set<MyObj__c>
   //   Map<Id, Account>
-  //   Set<MyObject__c>
   // -------------------------------------------------------------------------
 
+  const genericTypeRegex =
+    /\b(?:List|Set|Iterable|Iterator)<([\w]+)>|\bMap<([\w]+)\s*,\s*([\w]+)>/g;
 
-const genericTypeRegex =
-  /\b(?:List|Set|Iterable|Iterator)<([\w]+)>|\bMap<([\w]+)\s*,\s*([\w]+)>/g;
+  while ((match = genericTypeRegex.exec(source)) !== null) {
 
-while ((match = genericTypeRegex.exec(source)) !== null) {
+    const discoveredTypes: string[] = [];
 
-  const discoveredTypes: string[] = [];
+    // List<T>, Set<T>, Iterable<T>, Iterator<T>
+    if (match[1]) {
+      discoveredTypes.push(match[1]);
+    }
 
-  // List<T>, Set<T>, Iterable<T>, Iterator<T>
-  if (match[1]) {
-    discoveredTypes.push(match[1]);
-  }
+    // Map<K,V>
+    if (match[2]) {
+      discoveredTypes.push(match[2]);
+    }
 
-  // Map<K,V>
-  if (match[2]) {
-    discoveredTypes.push(match[2]);
-  }
+    if (match[3]) {
+      discoveredTypes.push(match[3]);
+    }
 
-  if (match[3]) {
-    discoveredTypes.push(match[3]);
-  }
+    for (const name of discoveredTypes) {
 
-  for (const name of discoveredTypes) {
+      if (!name) {
+        continue;
+      }
 
-    if (!name) continue;
+      if (isPrimitiveType(name)) {
+        continue;
+      }
 
-    if (isPrimitiveType(name)) continue;
+      const symbolType = classifySymbol(name);
 
-    const symbolType = classifySymbol(name);
+      if (symbolType) {
 
-    if (symbolType) {
-      deps.push({
-        type: symbolType,
-        apiName: name,
-        referenceType: 'GenericType'
-      });
+        deps.push({
+          type: symbolType,
+          apiName: name,
+          referenceType: 'GenericType'
+        });
+      }
     }
   }
-}
 
   // -------------------------------------------------------------------------
-  // Variable Type Mapping
-  // Tracks:
+  // Variable Type Tracking
+  // Handles:
   //   Account acc;
   //   MyClass svc;
-  //   MyObject__c obj;
+  //   MyObj__c obj;
   // -------------------------------------------------------------------------
 
   const varMap = new Map<string, string>();
@@ -285,6 +334,7 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
     /\b([A-Z][\w]*)\s+([a-zA-Z_]\w*)\b/g;
 
   while ((match = typeDeclarationRegex.exec(source)) !== null) {
+
     const typeName = match[1];
     const variableName = match[2];
 
@@ -296,6 +346,7 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
       symbolType === 'CustomObject' ||
       symbolType === 'StandardObject'
     ) {
+
       deps.push({
         type: symbolType,
         apiName: typeName,
@@ -305,16 +356,17 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
   }
 
   // -------------------------------------------------------------------------
-  // Collection declarations
+  // Collection Variable Tracking
   // Handles:
   //   List<Account> accounts;
-  //   Set<MyObject__c> objs;
+  //   Set<MyObj__c> objs;
   // -------------------------------------------------------------------------
 
   const collectionDeclarationRegex =
     /(?:List|Set|Iterable|Iterator)<([\w]+)>\s+([a-zA-Z_]\w*)\b/g;
 
   while ((match = collectionDeclarationRegex.exec(source)) !== null) {
+
     const typeName = match[1];
     const variableName = match[2];
 
@@ -326,6 +378,7 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
       symbolType === 'CustomObject' ||
       symbolType === 'StandardObject'
     ) {
+
       deps.push({
         type: symbolType,
         apiName: typeName,
@@ -335,13 +388,14 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
   }
 
   // -------------------------------------------------------------------------
-  // SOQL SELECT & FROM
+  // SOQL SELECT / FROM
   // -------------------------------------------------------------------------
 
   const soqlSelectRegex =
     /\bSELECT\s+([\s\S]*?)\s+FROM\s+([\w]+)/gi;
 
   while ((match = soqlSelectRegex.exec(source)) !== null) {
+
     const selectBody = match[1];
     const fromObject = match[2];
 
@@ -351,6 +405,7 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
       objectType === 'CustomObject' ||
       objectType === 'StandardObject'
     ) {
+
       deps.push({
         type: objectType,
         apiName: fromObject,
@@ -359,13 +414,12 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
     }
 
     for (const field of selectBody.split(',')) {
-      const cleanField = field.trim().split(/\s+/)[0];
 
-      // Custom fields
-      if (
-        cleanField.endsWith('__c') ||
-        cleanField.endsWith('__r')
-      ) {
+      const cleanField =
+        field.trim().split(/\s+/)[0];
+
+      if (isCustomField(cleanField)) {
+
         deps.push({
           type: 'CustomField',
           apiName: `${fromObject}.${cleanField}`,
@@ -379,42 +433,28 @@ while ((match = genericTypeRegex.exec(source)) !== null) {
   // Dot-notation field access
   // Handles:
   //   acc.CustomField__c
+  //   acc.CustomField__pc
   //   obj.Parent__r
   // -------------------------------------------------------------------------
 
   const dotFieldRegex =
-    /\b([a-zA-Z_]\w*)\.([\w]+__(?:c|r))\b/g;
+    /\b([a-zA-Z_]\w*)\.([\w]+__(?:c|r|pc))\b/g;
 
   while ((match = dotFieldRegex.exec(source)) !== null) {
-    const varName = match[1];
+
+    const variableName = match[1];
     const fieldName = match[2];
 
-    const objectName = varMap.get(varName);
+    const objectName = varMap.get(variableName);
 
     if (objectName) {
+
       deps.push({
         type: 'CustomField',
         apiName: `${objectName}.${fieldName}`,
         referenceType: 'FieldAccess'
       });
     }
-  }
-
-  return deduplicateDeps(deps);
-}
-/**
- * Analyzes a ValidationRule XML for field references.
- */
-export function analyzeValidationRuleFile(filePath: string): TextDependency[] {
-  const deps: TextDependency[] = [];
-  if (!fs.existsSync(filePath)) return deps;
-
-  const source = fs.readFileSync(filePath, 'utf-8');
-  let match: RegExpExecArray | null;
-
-  const formulaFieldRegex = /\b([\w]+__c)\b/g;
-  while ((match = formulaFieldRegex.exec(source)) !== null) {
-    deps.push({ type: 'CustomField', apiName: match[1], referenceType: 'ValidationFormula' });
   }
 
   return deduplicateDeps(deps);

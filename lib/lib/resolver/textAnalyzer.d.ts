@@ -20,10 +20,6 @@ export interface TextDependency {
  */
 export declare function analyzeApexFile(filePath: string): TextDependency[];
 /**
- * Analyzes a ValidationRule XML for field references.
- */
-export declare function analyzeValidationRuleFile(filePath: string): TextDependency[];
-/**
  * Scans a directory recursively for Apex files matching a component name.
  */
 export declare function findApexFile(componentName: string, sourceDir: string, extension: 'cls' | 'trigger'): string | null;
