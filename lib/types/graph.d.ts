@@ -28,9 +28,15 @@ export interface ManagedPackagePrerequisite {
     packageName: string;
     reason: string;
 }
+export interface StubPackagePrerequisite {
+    packageLabel: string;
+    namespace: string | null;
+    components: string[];
+}
 export interface ResolutionResult {
     graph: DependencyGraph;
     managedPackages: ManagedPackagePrerequisite[];
+    stubPackages: StubPackagePrerequisite[];
     toolingApiQueryCount: number;
     warnings: string[];
 }

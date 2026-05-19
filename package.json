@@ -1,6 +1,6 @@
 {
   "name": "@rykerj/sf-dependency-resolver",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "SF CLI plugin to resolve Salesforce component dependencies and produce scoped scratch org packages",
   "author": "Your Org",
   "license": "MIT",

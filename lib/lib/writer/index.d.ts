@@ -1,4 +1,4 @@
-import { DependencyGraph, ManagedPackagePrerequisite } from '../../types/graph';
+import { DependencyGraph, ManagedPackagePrerequisite, StubPackagePrerequisite } from '../../types/graph';
 import { TransformationLogEntry } from '../transformer/objectTransformer';
 import { ResolverConfig } from '../../types/config';
 /**
@@ -15,9 +15,12 @@ export declare function writeDependencyGraph(outputDir: string, graph: Dependenc
     maxDepth: number;
 }): void;
 /**
- * Writes managed package prerequisites to package-prerequisites.json.
+ * Writes all package prerequisites to package-prerequisites.json.
+ * Covers:
+ *   - 1GP managed packages (identified via namespace prefix)
+ *   - 2GP and unlocked packages (identified via stub directory)
  */
-export declare function writePackagePrerequisites(outputDir: string, prerequisites: ManagedPackagePrerequisite[]): void;
+export declare function writePackagePrerequisites(outputDir: string, managedPackages: ManagedPackagePrerequisite[], stubPackages: StubPackagePrerequisite[]): void;
 /**
  * Writes the transformation log to transformation-log.json.
  */

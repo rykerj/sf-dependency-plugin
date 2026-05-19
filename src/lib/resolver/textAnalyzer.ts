@@ -70,7 +70,10 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     'RecordType',
     'PermissionSet',
     'PermissionSetAssignment',
-    'Profile'
+    'Profile',
+    'CustomNotificationType',
+    'EmailTemplate',
+    'Pattern'
   ]);
 
   // -------------------------------------------------------------------------

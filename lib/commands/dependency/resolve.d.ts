@@ -10,6 +10,8 @@ export default class DependencyResolve extends Command {
         'max-depth': import("@oclif/core/lib/interfaces").OptionFlag<number | undefined, import("@oclif/core/lib/interfaces").CustomOptions>;
         'dry-run': import("@oclif/core/lib/interfaces").BooleanFlag<boolean>;
         'no-tooling-api': import("@oclif/core/lib/interfaces").BooleanFlag<boolean>;
+        'stub-dir': import("@oclif/core/lib/interfaces").OptionFlag<string | undefined, import("@oclif/core/lib/interfaces").CustomOptions>;
+        'tooling-api-mode': import("@oclif/core/lib/interfaces").OptionFlag<string | undefined, import("@oclif/core/lib/interfaces").CustomOptions>;
     };
     run(): Promise<void>;
     /**
