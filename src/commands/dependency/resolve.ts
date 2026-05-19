@@ -18,7 +18,6 @@ import {
   ManagedPackagePrerequisite,
   StubPackagePrerequisite,
 } from '../../lib/index';
-import { retrieveAndDiff, pruneGraphFromMissing } from '../../lib/retriever/index';
 
 export default class DependencyResolve extends Command {
   static description =
@@ -169,6 +168,8 @@ export default class DependencyResolve extends Command {
       writePackagePrerequisites(config.outputDir, managedPackages, result.stubPackages);
     }
 
+    writePackageXml(config.outputDir, graph);
+
     writeConfigSnapshot(config.outputDir, config);
 
     if (flags['dry-run']) {
@@ -177,32 +178,13 @@ export default class DependencyResolve extends Command {
       return;
     }
 
-    // --- Phase 2: Retrieval + diff
+    // --- Phase 2: Retrieval
     this.log(`\n📥  Phase 2: Retrieving metadata from org...`);
-    const packageXmlPath = path.join(config.outputDir, 'package.xml');
-    const retrieveDir = path.join(config.outputDir, '_retrieved');
-    const { missingComponents } = await retrieveAndDiff(config.org, packageXmlPath, retrieveDir);
-
-    // --- Phase 2.5: Prune graph of anything the org didn't return
-    // This is the final ground truth pass — regex false positives and
-    // references to components that don't exist in the org are removed here.
-    if (missingComponents.length > 0) {
-      this.log(`\n🔍  Phase 2.5: Pruning graph against retrieval results...`);
-      const pruned = pruneGraphFromMissing(graph, missingComponents);
-      if (pruned.length > 0) {
-        this.log(`    ✂️  Pruned ${pruned.length} component(s) not found in org:`);
-        for (const id of pruned) {
-          this.log(`       - ${id}`);
-        }
-        // Re-write package.xml now that the graph is pruned
-        writePackageXml(config.outputDir, graph);
-        this.log(`    📦  package.xml updated to reflect pruned manifest.`);
-      }
-    }
+    await this.retrieve(config);
 
     // --- Phase 3: Transformation
     this.log(`\n🔧  Phase 3: Transforming metadata...`);
-    const retrievedSourceDir = path.join(retrieveDir, 'force-app');
+    const retrievedSourceDir = path.join(config.outputDir, '_retrieved', 'force-app');
     const transformedSourceDir = path.join(config.outputDir, 'force-app');
 
     const transformer = new Transformer(config.policies, graph);
@@ -213,7 +195,7 @@ export default class DependencyResolve extends Command {
       `    ✅ ${transformResult.log.length} transformations applied. See transformation-log.json.`
     );
 
-    // --- Phase 4: Final output (package.xml already written above; re-write to be safe)
+    // --- Phase 4: Write final package.xml
     this.log(`\n📦  Phase 4: Writing output...`);
     writePackageXml(config.outputDir, graph);
 
@@ -225,6 +207,28 @@ export default class DependencyResolve extends Command {
       this.log(`    package-prerequisites.json — install these packages in scratch org first`);
     }
     this.log('');
+  }
+
+  /**
+   * Shells out to sf project retrieve using the resolved manifest.
+   * Retrieves into a temporary _retrieved directory before transformation.
+   */
+  private async retrieve(config: ResolverConfig): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { execSync } = require('child_process');
+    const retrieveDir = path.join(config.outputDir, '_retrieved');
+
+    try {
+      execSync(
+        `sf project retrieve start ` +
+          `--target-org ${config.org} ` +
+          `--manifest ${path.join(config.outputDir, 'package.xml')} ` +
+          `--output-dir ${retrieveDir}`,
+        { stdio: 'inherit' }
+      );
+    } catch (err: any) {
+      throw new Error(`Retrieval failed: ${err.message}`);
+    }
   }
 
   /**
