@@ -7,22 +7,90 @@ import { ResolverConfig } from '../../types/config';
 const PACKAGE_XML_VERSION = '61.0';
 
 /**
+ * Converts source-level identifiers into deployable metadata identifiers.
+ */
+function normalizeMetadataApiName(
+  type: string,
+  apiName: string
+): string {
+
+  // -------------------------------------------------------------------
+  // Person Account field projections
+  //
+  // Apex:
+  //   Account.MyField__pc
+  //
+  // Metadata API:
+  //   Contact.MyField__c
+  // -------------------------------------------------------------------
+
+  if (
+    type === 'CustomField' &&
+    apiName.includes('.')
+  ) {
+
+    const [objectName, fieldName] =
+      apiName.split('.');
+
+    if (
+      objectName === 'Account' &&
+      fieldName.endsWith('__pc')
+    ) {
+
+      return `Contact.${fieldName.replace(/__pc$/, '__c')}`;
+    }
+  }
+
+  return apiName;
+}
+
+/**
  * Groups deployable nodes by metadata type for package.xml generation.
  */
-function groupByType(graph: DependencyGraph): Map<string, string[]> {
-  const groups = new Map<string, string[]>();
+function groupByType(
+  graph: DependencyGraph
+): Map<string, string[]> {
+
+  const groups = new Map<string, Set<string>>();
 
   for (const node of graph.nodes.values()) {
-    if (node.isManagedPackage) continue;
-    if (node.policy !== 'include' && node.policy !== 'stub') continue;
 
-    const members = groups.get(node.type) ?? [];
-    members.push(node.apiName);
+    if (node.isManagedPackage) {
+      continue;
+    }
+
+    if (
+      node.policy !== 'include' &&
+      node.policy !== 'stub'
+    ) {
+      continue;
+    }
+
+    const normalizedApiName =
+      normalizeMetadataApiName(
+        node.type,
+        node.apiName
+      );
+
+    const members =
+      groups.get(node.type) ?? new Set<string>();
+
+    members.add(normalizedApiName);
+
     groups.set(node.type, members);
   }
 
-  return groups;
+  // Convert Sets back to sorted arrays
+  return new Map(
+    Array.from(groups.entries()).map(
+      ([type, members]) => [
+        type,
+        Array.from(members).sort()
+      ]
+    )
+  );
 }
+
 
 /**
  * Generates the final package.xml from the resolved dependency graph.

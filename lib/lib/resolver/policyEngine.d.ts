@@ -6,9 +6,15 @@ import { PolicyValue, PolicyMap } from '../../types/config';
  */
 export declare function getPolicy(componentType: string, policies: PolicyMap): PolicyValue;
 /**
- * Returns true if a namespace prefix indicates a managed package component.
- * Managed package components have a namespace prefix followed by __ in their API name.
- * Standard Salesforce namespaces (e.g. FinServ for FSC) are also detected.
+ * Returns true if a component appears to belong to a managed package.
+ *
+ * Examples:
+ *   FinServ__FinancialAccount__c       -> true
+ *   fflib__Application                 -> true
+ *   MyObject__c                        -> false
+ *   Account                            -> false
+ *   MyObject__c.MyField__c             -> false
+ *   ns__MyObject__c.ns__Field__c       -> true
  */
 export declare function isManagedPackageComponent(apiName: string, componentType: string): boolean;
 /**

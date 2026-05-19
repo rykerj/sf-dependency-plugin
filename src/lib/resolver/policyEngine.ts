@@ -17,23 +17,84 @@ export function getPolicy(componentType: string, policies: PolicyMap): PolicyVal
 }
 
 /**
- * Returns true if a namespace prefix indicates a managed package component.
- * Managed package components have a namespace prefix followed by __ in their API name.
- * Standard Salesforce namespaces (e.g. FinServ for FSC) are also detected.
+ * Returns true if a component appears to belong to a managed package.
+ *
+ * Examples:
+ *   FinServ__FinancialAccount__c       -> true
+ *   fflib__Application                 -> true
+ *   MyObject__c                        -> false
+ *   Account                            -> false
+ *   MyObject__c.MyField__c             -> false
+ *   ns__MyObject__c.ns__Field__c       -> true
  */
-export function isManagedPackageComponent(apiName: string, componentType: string): boolean {
-  // Custom fields and objects use __ suffix for custom, but managed ones have namespace__ComponentName__c
-  // A managed package component will have exactly two __ segments in its name
-  const parts = apiName.split('__');
+export function isManagedPackageComponent(
+  apiName: string,
+  componentType: string
+): boolean {
 
-  // Standard components: no __ at all (e.g. Account, Contact)
-  // Custom components: one __ segment (e.g. MyObject__c, MyField__c)
-  // Managed components: two __ segments (e.g. FinServ__FinancialAccount__c, fflib__Application)
-  if (parts.length >= 3) return true;
+  // -------------------------------------------------------------------
+  // Handle fully-qualified field references separately
+  // Example:
+  //   MyObject__c.MyField__c
+  //   ns__MyObject__c.ns__MyField__c
+  // -------------------------------------------------------------------
 
-  // Apex classes from managed packages also follow namespace__ClassName pattern
-  if (componentType === 'ApexClass' || componentType === 'ApexTrigger') {
-    if (parts.length === 2 && !apiName.endsWith('__c')) return true;
+  const fieldParts = apiName.split('.');
+
+  // Analyze each segment independently
+  for (const segment of fieldParts) {
+
+    // Managed package naming:
+    //   namespace__ComponentName
+    //   namespace__Object__c
+    //
+    // Non-managed custom:
+    //   MyObject__c
+    //   MyField__c
+    //
+    // We only consider it managed if:
+    //   - it STARTS with namespace__
+    //   - AND contains another __ later
+    //
+    // Examples:
+    //   FinServ__FinancialAccount__c
+    //   fflib__Application
+    //
+
+    const managedPattern =
+      /^[a-zA-Z][a-zA-Z0-9]*__[\w]+(?:__c|__mdt|__e|__b|__x|__kav)?$/;
+
+    if (managedPattern.test(segment)) {
+
+      // Exclude normal custom object names:
+      //   MyObject__c
+      //
+      // which also technically match the pattern shape
+      //
+      // We require:
+      //   namespace__Thing
+      //
+      // meaning TWO "__" occurrences minimum
+
+      const underscoreCount =
+        (segment.match(/__/g) || []).length;
+
+      if (underscoreCount >= 2) {
+        return true;
+      }
+
+      // Apex classes:
+      //   fflib__Application
+      //
+      // only one "__"
+      else if (
+        (componentType === 'ApexClass' ||
+         componentType === 'ApexTrigger') &&
+        !segment.endsWith('__c')
+      ) {
+        return true;
+      }
+    }
   }
 
   return false;
