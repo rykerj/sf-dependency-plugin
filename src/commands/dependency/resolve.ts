@@ -168,6 +168,8 @@ export default class DependencyResolve extends Command {
       writePackagePrerequisites(config.outputDir, managedPackages, result.stubPackages);
     }
 
+    writePackageXml(config.outputDir, graph);
+
     writeConfigSnapshot(config.outputDir, config);
 
     if (flags['dry-run']) {
