@@ -15,11 +15,6 @@ export default class DependencyResolve extends Command {
     };
     run(): Promise<void>;
     /**
-     * Shells out to sf project retrieve using the resolved manifest.
-     * Retrieves into a temporary _retrieved directory before transformation.
-     */
-    private retrieve;
-    /**
      * Interactive confirmation prompt for Tooling API budget threshold.
      */
     private promptBudgetConfirm;

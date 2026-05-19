@@ -23,6 +23,8 @@ export { getSfConnection, buildToolingApiClient } from './auth/index';
 export { loadConfig, writeExampleConfig } from './configLoader';
 export { ToolingApiResolver } from './resolver/toolingApi';
 export { buildStubDirectoryIndex, findInStubIndex, buildStubPackagePrerequisites } from './resolver/stubDirectory';
+export { retrieveAndDiff, pruneGraphFromMissing } from './retriever/index';
+export type { RetrievalResult, MissingComponent } from './retriever/index';
 export type { StubPackageComponent, StubDirectoryIndex } from './resolver/stubDirectory';
 
 // Type re-exports — types live at src/types/ relative to src/lib/

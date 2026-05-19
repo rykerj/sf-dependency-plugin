@@ -15,6 +15,8 @@ export { getSfConnection, buildToolingApiClient } from './auth/index';
 export { loadConfig, writeExampleConfig } from './configLoader';
 export { ToolingApiResolver } from './resolver/toolingApi';
 export { buildStubDirectoryIndex, findInStubIndex, buildStubPackagePrerequisites } from './resolver/stubDirectory';
+export { retrieveAndDiff, pruneGraphFromMissing } from './retriever/index';
+export type { RetrievalResult, MissingComponent } from './retriever/index';
 export type { StubPackageComponent, StubDirectoryIndex } from './resolver/stubDirectory';
 export type { ResolutionResult, DependencyGraph, GraphNode, GraphEdge, ManagedPackagePrerequisite, StubPackagePrerequisite } from '../types/graph';
 export type { ResolverConfig, PolicyMap, PolicyValue, FieldPolicy } from '../types/config';
