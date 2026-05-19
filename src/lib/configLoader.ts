@@ -28,15 +28,22 @@ export function loadConfig(
 
   validateRaw(raw, absolutePath);
 
+  const useLocalSource = overrides.useLocalSource ?? raw.useLocalSource ?? DEFAULT_CONFIG.useLocalSource!;
+
+  // Default toolingApiMode based on useLocalSource if not explicitly set
+  const defaultToolingApiMode = useLocalSource ? 'never' : 'primary';
+
   // Merge: defaults < file config < CLI overrides
   const merged: ResolverConfig = {
     seeds: overrides.seeds ?? raw.seeds,
     org: overrides.org ?? raw.org,
-    useLocalSource: overrides.useLocalSource ?? raw.useLocalSource ?? DEFAULT_CONFIG.useLocalSource!,
+    useLocalSource,
     localSourceDir: overrides.localSourceDir ?? raw.localSourceDir ?? DEFAULT_CONFIG.localSourceDir!,
     maxDepth: overrides.maxDepth ?? raw.maxDepth ?? DEFAULT_CONFIG.maxDepth!,
     outputDir: overrides.outputDir ?? raw.outputDir,
     fieldPolicy: raw.fieldPolicy ?? DEFAULT_CONFIG.fieldPolicy!,
+    toolingApiMode: overrides.toolingApiMode ?? raw.toolingApiMode ?? defaultToolingApiMode,
+    stubDir: overrides.stubDir ?? raw.stubDir ?? undefined,
     policies: {
       ...DEFAULT_POLICIES,
       ...(raw.policies ?? {}),
@@ -60,6 +67,8 @@ export function writeExampleConfig(targetPath: string, seeds: string[] = []): vo
     maxDepth: 10,
     outputDir: './scratch-manifests/my-feature',
     fieldPolicy: 'referenced-only',
+    toolingApiMode: 'never',
+    // stubDir: './package-stubs',  // Uncomment and set to your stub directory path
     policies: { ...DEFAULT_POLICIES },
   };
 
@@ -90,6 +99,15 @@ function validateRaw(raw: any, filePath: string): void {
 
   if (raw.fieldPolicy && !['referenced-only', 'all'].includes(raw.fieldPolicy)) {
     errors.push('"fieldPolicy" must be "referenced-only" or "all"');
+  }
+
+  const validToolingApiModes = ['never', 'package-names-only', 'supplement', 'primary'];
+  if (raw.toolingApiMode && !validToolingApiModes.includes(raw.toolingApiMode)) {
+    errors.push(`"toolingApiMode" must be one of: ${validToolingApiModes.join(', ')}`);
+  }
+
+  if (raw.stubDir && typeof raw.stubDir !== 'string') {
+    errors.push('"stubDir" must be a string path to your package stub directory');
   }
 
   if (raw.policies) {

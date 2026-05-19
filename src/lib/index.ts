@@ -22,7 +22,9 @@ export {
 export { getSfConnection, buildToolingApiClient } from './auth/index';
 export { loadConfig, writeExampleConfig } from './configLoader';
 export { ToolingApiResolver } from './resolver/toolingApi';
+export { buildStubDirectoryIndex, findInStubIndex, buildStubPackagePrerequisites } from './resolver/stubDirectory';
+export type { StubPackageComponent, StubDirectoryIndex } from './resolver/stubDirectory';
 
-// Type re-exports
-export type { ResolutionResult, DependencyGraph, GraphNode, GraphEdge, ManagedPackagePrerequisite } from '../types/graph';
+// Type re-exports — types live at src/types/ relative to src/lib/
+export type { ResolutionResult, DependencyGraph, GraphNode, GraphEdge, ManagedPackagePrerequisite, StubPackagePrerequisite } from '../types/graph';
 export type { ResolverConfig, PolicyMap, PolicyValue, FieldPolicy } from '../types/config';

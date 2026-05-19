@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DependencyGraph, ManagedPackagePrerequisite } from '../../types/graph';
+import { DependencyGraph, ManagedPackagePrerequisite, StubPackagePrerequisite } from '../../types/graph';
 import { TransformationLogEntry } from '../transformer/objectTransformer';
 import { ResolverConfig } from '../../types/config';
 
@@ -148,17 +148,42 @@ export function writeDependencyGraph(
 }
 
 /**
- * Writes managed package prerequisites to package-prerequisites.json.
+ * Writes all package prerequisites to package-prerequisites.json.
+ * Covers:
+ *   - 1GP managed packages (identified via namespace prefix)
+ *   - 2GP and unlocked packages (identified via stub directory)
  */
 export function writePackagePrerequisites(
   outputDir: string,
-  prerequisites: ManagedPackagePrerequisite[]
+  managedPackages: ManagedPackagePrerequisite[],
+  stubPackages: StubPackagePrerequisite[]
 ): void {
+
+  // Build a unified install order across both types
+  const allPackageLabels = [
+    ...managedPackages.map((p) => p.packageName),
+    ...stubPackages.map((p) => p.packageLabel),
+  ];
+
   const output = {
-    managedPackages: prerequisites,
-    // Simple install order: alphabetical by package name
-    // A future version could topologically sort based on package dependencies
-    installOrder: [...new Set(prerequisites.map((p) => p.packageName))].sort(),
+    /**
+     * Managed packages identified by namespace prefix (1GP).
+     * Install via: sf package install --package <PackageVersionId>
+     */
+    managedPackages,
+
+    /**
+     * Packages identified via stub directory (2GP, unlocked, or 1GP stubs).
+     * Install via: sf package install --package <PackageVersionId>
+     * The packageLabel corresponds to the subdirectory name in your stubDir.
+     */
+    stubPackages,
+
+    /**
+     * Suggested install order — alphabetical.
+     * Review and adjust if packages have dependencies on each other.
+     */
+    installOrder: [...new Set(allPackageLabels)].sort(),
   };
 
   fs.writeFileSync(

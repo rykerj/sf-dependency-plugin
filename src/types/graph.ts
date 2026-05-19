@@ -25,7 +25,7 @@ export interface GraphEdge {
 export interface DependencyGraph {
   nodes: Map<string, GraphNode>;
   edges: GraphEdge[];
-  getDeployableNodes() : GraphNode[];
+  getDeployableNodes(): GraphNode[];
 }
 
 export interface ManagedPackagePrerequisite {
@@ -34,9 +34,16 @@ export interface ManagedPackagePrerequisite {
   reason: string;
 }
 
+export interface StubPackagePrerequisite {
+  packageLabel: string;
+  namespace: string | null;
+  components: string[];
+}
+
 export interface ResolutionResult {
   graph: DependencyGraph;
   managedPackages: ManagedPackagePrerequisite[];
+  stubPackages: StubPackagePrerequisite[];
   toolingApiQueryCount: number;
   warnings: string[];
 }

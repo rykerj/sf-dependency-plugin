@@ -14,8 +14,10 @@ import {
   writePackagePrerequisites,
   writeTransformationLog,
   writeConfigSnapshot,
+  ResolverConfig,
+  ManagedPackagePrerequisite,
+  StubPackagePrerequisite,
 } from '../../lib/index';
-import { ManagedPackagePrerequisite, ResolverConfig } from '../../lib';
 
 export default class DependencyResolve extends Command {
   static description =
@@ -59,6 +61,14 @@ export default class DependencyResolve extends Command {
       description: 'Disable Tooling API entirely — use local source analysis only',
       default: false,
     }),
+    'stub-dir': Flags.string({
+      description: 'Path to directory of Apex stubs from installed packages (2GP, unlocked, 1GP)',
+      required: false,
+    }),
+    'tooling-api-mode': Flags.string({
+      description: 'Tooling API usage mode: never | package-names-only | supplement | primary',
+      required: false,
+    }),
   };
 
   async run(): Promise<void> {
@@ -66,10 +76,12 @@ export default class DependencyResolve extends Command {
 
     // --- Load and merge config
     const config = loadConfig(flags.config, {
-      seeds: flags.seed ? flags.seed.split(',').map((s) => s.trim()) : undefined,
+      seeds: flags.seed ? flags.seed.split(',').map((s: string) => s.trim()) : undefined,
       org: flags.org,
       outputDir: flags['output-dir'],
       maxDepth: flags['max-depth'],
+      stubDir: flags['stub-dir'],
+      toolingApiMode: flags['tooling-api-mode'] as any ?? undefined,
     });
 
     this.log(`\n🔍  sf-dependency-resolver`);
@@ -89,8 +101,8 @@ export default class DependencyResolve extends Command {
         const toolingClient = buildToolingApiClient(connection);
 
         toolingApiResolver = new ToolingApiResolver(toolingClient, {
-          onWarn: (msg:string) => this.warn(msg),
-          onConfirmPrompt: async (count:number) => {
+          onWarn: (msg: string) => this.warn(msg),
+          onConfirmPrompt: async (count: number) => {
             return this.promptBudgetConfirm(count);
           },
         });
@@ -124,9 +136,20 @@ export default class DependencyResolve extends Command {
 
     if (managedPackages.length > 0) {
       this.log(`\n⚠️   Managed package prerequisites detected. Install these before deploying:`);
-      managedPackages.forEach((pkg: ManagedPackagePrerequisite, i:number) => {
+      managedPackages.forEach((pkg: ManagedPackagePrerequisite, i: number) => {
         this.log(`    ${i + 1}. ${pkg.packageName} (${pkg.namespace})`);
       });
+    }
+
+    if (result.stubPackages.length > 0) {
+      this.log(`\n⚠️   Stub package prerequisites detected (2GP/unlocked/1GP via stub directory):`);
+      result.stubPackages.forEach((pkg, i: number) => {
+        const ns = pkg.namespace ? ` (${pkg.namespace})` : ' (no namespace — 2GP/unlocked)';
+        this.log(`    ${i + 1}. ${pkg.packageLabel}${ns} — ${pkg.components.length} component(s)`);
+      });
+    }
+
+    if (managedPackages.length > 0 || result.stubPackages.length > 0) {
       this.log(`    See package-prerequisites.json in output directory for details.\n`);
     }
 
@@ -141,13 +164,11 @@ export default class DependencyResolve extends Command {
       maxDepth: config.maxDepth,
     });
 
-    if (managedPackages.length > 0) {
-      writePackagePrerequisites(config.outputDir, managedPackages);
+    if (managedPackages.length > 0 || result.stubPackages.length > 0) {
+      writePackagePrerequisites(config.outputDir, managedPackages, result.stubPackages);
     }
 
     writeConfigSnapshot(config.outputDir, config);
-
-    writePackageXml(config.outputDir, graph);
 
     if (flags['dry-run']) {
       this.log(`🏁  Dry run complete. Graph written to ${config.outputDir}/dependency-graph.json`);
@@ -191,6 +212,7 @@ export default class DependencyResolve extends Command {
    * Retrieves into a temporary _retrieved directory before transformation.
    */
   private async retrieve(config: ResolverConfig): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { execSync } = require('child_process');
     const retrieveDir = path.join(config.outputDir, '_retrieved');
 
@@ -221,7 +243,7 @@ export default class DependencyResolve extends Command {
         `\n⚠️  Warning: ${count} Tooling API queries executed — this is your full daily budget.\n` +
           `   Continuing may exhaust your org's daily API limit.\n` +
           `   Continue? (y/n): `,
-        (answer:string) => {
+        (answer: string) => {
           rl.close();
           resolve(answer.trim().toLowerCase() === 'y');
         }

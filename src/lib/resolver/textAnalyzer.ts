@@ -70,11 +70,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     'RecordType',
     'PermissionSet',
     'PermissionSetAssignment',
-    'Profile',
-    'CustomNotificationType',
-    'EmailTemplate',
-    'Pattern',
-
+    'Profile'
   ]);
 
   // -------------------------------------------------------------------------
@@ -132,10 +128,6 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     return /__(c|r|pc)$/.test(name);
   }
 
-  function isConstantLike(name: string): boolean {
-    return /^[A-Z][A-Z0-9_]*$/.test(name);
-  }
-
   function classifySymbol(
     name: string
   ): 'ApexClass' | 'CustomObject' | 'StandardObject' | null {
@@ -173,27 +165,6 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
     }
 
     return 'ApexClass';
-  }
-
-  /**
- * True if this looks like an Apex inner class reference:
- *   Outer.Inner
- */
-  function isInnerClassReference(name: string): boolean {
-    return /^[A-Z]\w*\.[A-Z]\w*$/.test(name);
-  }
-
-  /**
-   * Converts:
-   *   Outer.Inner -> Outer
-   */
-  function normalizeApexTypeName(name: string): string {
-
-    if (isInnerClassReference(name)) {
-      return name.split('.')[0];
-    }
-
-    return name;
   }
 
   // -------------------------------------------------------------------------
@@ -252,7 +223,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   // -------------------------------------------------------------------------
 
   const instantiationRegex =
-    /\bnew\s+([\w.]+)\s*[({]/g;
+    /\bnew\s+([\w]+)\s*[({]/g;
 
   while ((match = instantiationRegex.exec(source)) !== null) {
 
@@ -279,18 +250,12 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   // -------------------------------------------------------------------------
 
   const staticCallRegex =
-    /\b([A-Z][\w]*(?:\.[A-Z][\w]*)?)\.[\w]+\s*\(/g;
+    /\b([A-Z][\w]*)\.[\w]+\s*\(/g;
 
   while ((match = staticCallRegex.exec(source)) !== null) {
 
-    const rawName = match[1];
+    const className = match[1];
 
-    // ❌ Skip constants like DISTRIBUTION_LEAD_QUAL
-    if (isConstantLike(rawName)) {
-      continue;
-    }
-
-    const className = normalizeApexTypeName(rawName);
     const symbolType = classifySymbol(className);
 
     if (symbolType === 'ApexClass') {
@@ -312,7 +277,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   // -------------------------------------------------------------------------
 
   const genericTypeRegex =
-    /\b(?:List|Set|Iterable|Iterator)<([\w.]+)>|\bMap<([\w.]+)\s*,\s*([\w.]+)>/g;;
+    /\b(?:List|Set|Iterable|Iterator)<([\w]+)>|\bMap<([\w]+)\s*,\s*([\w]+)>/g;
 
   while ((match = genericTypeRegex.exec(source)) !== null) {
 
@@ -366,7 +331,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   const varMap = new Map<string, string>();
 
   const typeDeclarationRegex =
-    /\b([A-Z][\w]*(?:\.[A-Z][\w]*)?)\s+([a-zA-Z_]\w*)\b/g;
+    /\b([A-Z][\w]*)\s+([a-zA-Z_]\w*)\b/g;
 
   while ((match = typeDeclarationRegex.exec(source)) !== null) {
 
@@ -598,13 +563,21 @@ function isCustomMetadataName(name: string): boolean {
 }
 
 function isApexKeyword(name: string): boolean {
+  // Case-insensitive — Apex keywords are case-insensitive at the language level
   const keywords = new Set([
     'string', 'integer', 'long', 'double', 'boolean', 'date', 'datetime',
     'time', 'blob', 'id', 'object', 'decimal', 'void', 'null', 'true', 'false',
     'system', 'math', 'json', 'limits', 'userinfo', 'schema', 'database',
     'test', 'assert', 'exception', 'sobject', 'list', 'set', 'map', 'iterator',
     'iterable', 'type', 'trigger', 'apexpages', 'pagereference',
-    'httprequest', 'httpresponse', 'http', 'url', 'label', 'flow'
+    'httprequest', 'httpresponse', 'http', 'url', 'label', 'flow',
+    'integer', 'long', 'select', 'from', 'where', 'insert', 'update',
+    'delete', 'upsert', 'merge', 'undelete', 'this', 'super', 'return',
+    'if', 'else', 'for', 'while', 'do', 'break', 'continue', 'try',
+    'catch', 'finally', 'throw', 'new', 'class', 'interface', 'enum',
+    'public', 'private', 'protected', 'global', 'static', 'final',
+    'abstract', 'virtual', 'override', 'with', 'without', 'sharing',
+    'inherited', 'transient', 'webservice',
   ]);
   return keywords.has(name.toLowerCase());
 }
@@ -613,15 +586,15 @@ function isSalesforceNamespace(name: string): boolean {
   const namespaces = new Set([
     'system', 'schema', 'database', 'test', 'math', 'json', 'limits',
     'userinfo', 'apexpages', 'messaging', 'connectapi', 'eventbus',
-    'triggeroperation', 'logginglevel', 'statuscode'
+    'triggeroperation', 'logginglevel', 'statuscode',
   ]);
   return namespaces.has(name.toLowerCase());
 }
 
 function isPrimitiveType(name: string): boolean {
   const primitives = new Set([
-    'string', 'integer', 'long', 'double', 'boolean', 'date',
-    'datetime', 'time', 'blob', 'id', 'object', 'decimal', 'sobject'
+    'String', 'Integer', 'Long', 'Double', 'Boolean', 'Date',
+    'DateTime', 'Time', 'Blob', 'ID', 'Object', 'Decimal', 'SObject',
   ]);
-  return primitives.has(name.toLowerCase());
+  return primitives.has(name);
 }
