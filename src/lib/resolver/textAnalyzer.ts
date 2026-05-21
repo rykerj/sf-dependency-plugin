@@ -4,8 +4,8 @@ import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const apexParserMod = require('@apexdevtools/apex-parser');
 
-const ApexParserFactory = apexParserMod.ApexParserFactory ?? apexParserMod.default?.ApexParserFactory;
-const ApexParserBaseVisitor = apexParserMod.ApexParserBaseVisitor ?? apexParserMod.default?.ApexParserBaseVisitor;
+const ApexParserFactory = apexParserMod.ApexParser;
+const ApexParserBaseVisitor = apexParserMod.ApexParserVisitor;
 
 // ---------------------------------------------------------------------------
 // Public interface
@@ -290,8 +290,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   try {
     const isTrigger = filePath.endsWith('.trigger');
 
-    const parserFactory = new ApexParserFactory();
-    const parser = parserFactory.createParser(source);
+    const parser = ApexParserFactory.createParser(source);
     const tree = isTrigger ? parser.triggerUnit() : parser.compilationUnit();
 
     const visitor = buildVisitor();
