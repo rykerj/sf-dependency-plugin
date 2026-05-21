@@ -26,9 +26,9 @@
     "dependency-resolver"
   ],
   "dependencies": {
+    "@apexdevtools/apex-parser": "^5.0.0",
     "@oclif/core": "^3",
     "@salesforce/core": "^6",
-    "@apexdevtools/apex-parser": "^4",
     "antlr4": "^4",
     "fast-xml-parser": "^4",
     "xmlbuilder2": "^3"
@@ -64,5 +64,9 @@
     "test": "mocha --require ts-node/register test/**/*.test.ts",
     "prepack": "npm run clean && npm run build && sf-prepack",
     "pack": "npm pack"
-  }
+  },
+  "bundleDependencies": [
+    "@apexdevtools/apex-parser",
+    "antlr4"
+  ]
 }

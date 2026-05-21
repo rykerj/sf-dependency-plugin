@@ -1,11 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { ApexParser, ApexParserVisitor, ApexLexer, ApexParserBaseVisitor} from '@apexdevtools/apex-parser';
+import { TokenStream , CharStreams, CommonTokenStream} from 'antlr4';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const apexParserMod = require('@apexdevtools/apex-parser');
 
-const ApexParserFactory = apexParserMod.ApexParser;
-const ApexParserBaseVisitor = apexParserMod.ApexParserVisitor;
 
 // ---------------------------------------------------------------------------
 // Public interface
@@ -290,7 +290,14 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
   try {
     const isTrigger = filePath.endsWith('.trigger');
 
-    const parser = ApexParserFactory.createParser(source);
+    const input = CharStreams.fromString(source);
+
+    const lexer = new ApexLexer(input)
+
+    const tokens = new CommonTokenStream(lexer);
+    
+    const parser = new ApexParser(tokens);
+
     const tree = isTrigger ? parser.triggerUnit() : parser.compilationUnit();
 
     const visitor = buildVisitor();
@@ -345,7 +352,7 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
 // ---------------------------------------------------------------------------
 
 function buildVisitor(): any {
-  class DependencyVisitor extends ApexParserBaseVisitor {
+  class DependencyVisitor extends ApexParserBaseVisitor<void> {
     deps: TextDependency[] = [];
 
     // Tracks variable name → declared type for field access resolution
