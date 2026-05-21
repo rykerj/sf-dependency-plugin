@@ -16,7 +16,9 @@
   "files": [
     "/lib",
     "/messages",
-    "/oclif.manifest.json"
+    "/oclif.manifest.json",
+    "/node_modules/@apexdevtools",
+    "/node_modules/antlr4"
   ],
   "keywords": [
     "salesforce",
@@ -28,8 +30,9 @@
   "dependencies": {
     "@oclif/core": "^3",
     "@salesforce/core": "^6",
+    "@apexdevtools/apex-parser": "^4",
+    "antlr4": "^4",
     "fast-xml-parser": "^4",
-    "sf": "^0.2.0",
     "xmlbuilder2": "^3"
   },
   "devDependencies": {
@@ -52,11 +55,16 @@
       }
     }
   },
+  "bundledDependencies": [
+    "@apexdevtools/apex-parser",
+    "antlr4"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf lib",
     "lint": "eslint src --ext .ts",
     "test": "mocha --require ts-node/register test/**/*.test.ts",
-    "prepack": "npm run clean && npm run build && oclif manifest"
+    "prepack": "npm run clean && npm run build && oclif manifest",
+    "pack": "npm pack"
   }
 }
