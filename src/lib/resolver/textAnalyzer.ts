@@ -289,7 +289,9 @@ export function analyzeApexFile(filePath: string): TextDependency[] {
 
   try {
     const isTrigger = filePath.endsWith('.trigger');
-    const parser = ApexParserFactory.createParser(source);
+
+    const parserFactory = new ApexParserFactory();
+    const parser = parserFactory.createParser(source);
     const tree = isTrigger ? parser.triggerUnit() : parser.compilationUnit();
 
     const visitor = buildVisitor();
