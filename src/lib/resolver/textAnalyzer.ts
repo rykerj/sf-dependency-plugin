@@ -1,8 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
-// Bundled via bundledDependencies in package.json — always present in the plugin
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ApexParserFactory, ApexParserBaseVisitor } = require('@apexdevtools/apex-parser');
+const apexParserMod = require('@apexdevtools/apex-parser');
+
+const ApexParserFactory = apexParserMod.ApexParserFactory ?? apexParserMod.default?.ApexParserFactory;
+const ApexParserBaseVisitor = apexParserMod.ApexParserBaseVisitor ?? apexParserMod.default?.ApexParserBaseVisitor;
 
 // ---------------------------------------------------------------------------
 // Public interface
