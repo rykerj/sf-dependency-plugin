@@ -16,7 +16,9 @@
   "files": [
     "/lib",
     "/messages",
-    "/oclif.manifest.json"
+    "/oclif.manifest.json",
+    "/node_modules/@apexdevtools",
+    "/node_modules/antlr4"
   ],
   "keywords": [
     "salesforce",
@@ -44,7 +46,7 @@
   "oclif": {
     "bin": "sf",
     "dirname": "sf",
-    "commands": "lib/commands",
+    "commands": "./lib/commands",
     "plugins": [],
     "topicSeparator": " ",
     "topics": {
@@ -59,10 +61,10 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "clean": "shx rm -rf lib oclif.manifest.json",
+    "clean": "rm -rf lib",
     "lint": "eslint src --ext .ts",
     "test": "mocha --require ts-node/register test/**/*.test.ts",
-    "prepack": "npm run clean && npm run build && sf-prepack",
+    "prepack": "npm run clean && npm run build && oclif manifest",
     "pack": "npm pack"
   }
 }
